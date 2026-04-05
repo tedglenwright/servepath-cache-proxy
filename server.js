@@ -131,6 +131,11 @@ const server = createServer(async (req, res) => {
         return;
       }
 
+      // Normalize bare model names — e.g. "all" → "servepath/all"
+      if (query.model === 'all') query.model = 'servepath/all';
+      if (query.model === 'servepath') query.model = 'servepath/all';
+      console.log(`🔀 Model resolved: ${query.model}`);
+
       // Try cache first
       const cacheKey = getCacheKey(query);
       const cached = await getCachedResponse(cacheKey);
