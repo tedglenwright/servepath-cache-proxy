@@ -55,6 +55,20 @@ async function saveToCache(cacheKey, response) {
   }
 }
 
+// Append model attribution to response content
+function appendAttribution(response) {
+  try {
+    const resolved = response.servepath_resolved || response.model || 'unknown';
+    if (response.choices && response.choices[0] && response.choices[0].message) {
+      const content = response.choices[0].message.content;
+      if (content && !content.includes('\u2014 ')) {
+        response.choices[0].message.content = content + `\n\n\u2014 ${resolved}`;
+      }
+    }
+  } catch(e) {}
+  return response;
+}
+
 // Forward request to ServePath
 function makeApiRequest(query, res) {
   const options = {
@@ -81,7 +95,7 @@ function makeApiRequest(query, res) {
       apiRes.on('data', chunk => body += chunk);
       apiRes.on('end', async () => {
         try {
-          const json = JSON.parse(body);
+          const json = appendAttribution(JSON.parse(body));
           const cacheKey = getCacheKey(query);
           await saveToCache(cacheKey, json);
           res.setHeader('X-Cache', 'MISS → STORED');
@@ -145,7 +159,7 @@ const server = createServer(async (req, res) => {
           'X-Cache': 'HIT',
           'X-Proxy': 'servepath-cache-proxy'
         });
-        res.end(JSON.stringify(cached));
+        res.end(JSON.stringify(appendAttribution(cached)));
         return;
       }
 
